@@ -159,7 +159,7 @@ namespace N_Puzzle
             int J = this.configuaration.Count-1;
             int I = this.configuaration.ElementAt(0).Count-1;
             List<State> variations = new List<State>();
-            if (j != 0)
+            if (j != 0 && !String.Equals(getValueAt(i,j-1), "-"))
             {
                 // element at top can be moved down
                 var tmp = this.getCopyOfConfiguration();
@@ -167,7 +167,7 @@ namespace N_Puzzle
                 swap(Tuple.Create(j, i), Tuple.Create(j - 1, i), tmp);
                 variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move, this));
             }
-            if (j != J)
+            if (j != J && !String.Equals(getValueAt(i, j + 1), "-"))
             {
                 // element below can be moved up
                 var tmp = this.getCopyOfConfiguration();
@@ -175,7 +175,7 @@ namespace N_Puzzle
                 swap(Tuple.Create(j, i), Tuple.Create(j + 1, i), tmp);
                 variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move, this));
             }
-            if (i != 0)
+            if (i != 0 && !String.Equals(getValueAt(i-1, j), "-"))
             {
                 // element to right can be moved left
                 var tmp = this.getCopyOfConfiguration();
@@ -183,7 +183,7 @@ namespace N_Puzzle
                 swap(Tuple.Create(j, i), Tuple.Create(j, i-1), tmp);
                 variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move, this));
             }
-            if (i != I)
+            if (i != I && !String.Equals(getValueAt(i - 1, j), "-"))
             {
                 // element to left can be moved right
                 var tmp = this.getCopyOfConfiguration();
@@ -203,7 +203,15 @@ namespace N_Puzzle
 
         public string getValueAt(int i, int j)
         {
-            return this.configuaration.ElementAt(j)[i];
+            try
+            {
+                return this.configuaration.ElementAt(j)[i];
+            }
+            catch (Exception)
+            {
+                return "-";
+            }
+           
         }
 
         public Tuple<int,int> getIndexOf(String value)
@@ -347,7 +355,6 @@ namespace N_Puzzle
                 newStates = top.getPossibleNextStates();
                 foreach (State state in newStates)
                 {
-                    //todo: check if the value still in queue and if so update queue
                     if (!visited.Contains(state))
                     {
                         queue.Add(state);
@@ -383,14 +390,17 @@ namespace N_Puzzle
             var manhattenInitialState = initialStates.Item1;
             var misplacedInitialState = initialStates.Item2;
 
-            var watchManhatten = System.Diagnostics.Stopwatch.StartNew();
-            var manhattenSolution = solve(manhattenInitialState, goalState);
-            var escapedMSManhatten = watchManhatten.ElapsedMilliseconds;
-
             var watchMisplaced = System.Diagnostics.Stopwatch.StartNew();
             var misplacedSolution = solve(misplacedInitialState, goalState);
             watchMisplaced.Stop();
             var escapedMSMisplaced = watchMisplaced.ElapsedMilliseconds;
+
+            var watchManhatten = System.Diagnostics.Stopwatch.StartNew();
+            var manhattenSolution = solve(manhattenInitialState, goalState);
+            var escapedMSManhatten = watchManhatten.ElapsedMilliseconds;
+            watchManhatten.Stop();
+
+            
 
             string[] output = { manhattenSolution, $"{escapedMSManhatten}", $"{escapedMSMisplaced}" };
             writeOutput(outputFileName, output);
