@@ -1,6 +1,7 @@
 import random
 import copy
 import os
+import sys
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -37,7 +38,7 @@ def make_random_move(j, i, config):
     return config
 
 def generate_input_config(configuaration):
-    number_of_moves = random.randint(1,30)
+    number_of_moves = random.randint(1,10)
     m = len(configuaration)
     n = 0
     while n < number_of_moves:
@@ -65,5 +66,11 @@ def run_test(test_name, goal_configuaration, input_configuaration):
 if __name__ == "__main__":
     goal_configuaration = generate_goal_config(4)
     input_configuration = generate_input_config(goal_configuaration)
-    run_test('test', goal_configuaration, input_configuration)
+    N, M = map(lambda x: int(x),sys.argv[1:])
+    for n in range(2,N+1):
+        for m in range(M):
+            goal_configuaration = generate_goal_config(n)
+            input_configuration = generate_input_config(goal_configuaration)
+            run_test(f'{n}_{m}', goal_configuaration, input_configuration)
+    
     

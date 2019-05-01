@@ -209,7 +209,7 @@ namespace N_Puzzle
             }
             catch (Exception)
             {
-                return "-";
+                return "None";
             }
            
         }
