@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DataStructures;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace N_Puzzle
 {
     abstract class Heruistic
     {
-        private State goalState;
+        public State goalState { get; }
         public Heruistic(State goalState)
         {
             if(goalState == null)
@@ -17,7 +18,7 @@ namespace N_Puzzle
             }
             this.goalState = goalState;
         }
-        abstract public float calculate(State state);
+        abstract public double calculate(State state);
     }
 
     class Manhatten : Heruistic
@@ -26,9 +27,27 @@ namespace N_Puzzle
         {
         }
 
-        public override float calculate(State state)
+        public override double calculate(State state)
         {
-            throw new NotImplementedException();
+            var goalConfiguration = this.goalState.configuaration;
+            var J = goalConfiguration.Count;
+            var I = goalConfiguration[0].Count;
+            double cost = 0;
+            for (int j = 0; j < J; j++)
+            {
+                for (int i = 0; i < I; i++)
+                {
+                    var value = goalState.getValueAt(i, j);
+                    // ignore '-' becaues there are 2 of them
+                    if (String.Equals(value, "-"))
+                    {
+                        continue;
+                    }
+                    var currentIndex = state.getIndexOf(value);
+                    cost += Math.Sqrt(Math.Pow(Math.Abs(currentIndex.Item1 - i), 2) + Math.Pow(Math.Abs(currentIndex.Item2 - j), 2));
+                }
+            }
+            return cost;
         }
     }
 
@@ -38,17 +57,34 @@ namespace N_Puzzle
         {
         }
 
-        public override float calculate(State state)
+        public override double calculate(State state)
         {
-            throw new NotImplementedException();
+            var goalConfiguration = this.goalState.configuaration;
+            var J = goalConfiguration.Count;
+            var I = goalConfiguration[0].Count;
+            double cost = 0;
+            for (int j = 0; j < J; j++)
+            {
+                for (int i = 0; i < I; i++)
+                {
+                    var goalValue = goalState.getValueAt(i, j);
+                    var currentValue = state.getValueAt(i, j);
+                    if (!String.Equals(goalValue, currentValue))
+                    {
+                        cost += 1;
+                    }
+                }
+            }
+            return cost;
         }
     }
     class State
     {
         private Heruistic heruistic;
-        private List<List<String>> configuaration { get; set; }
+        public List<List<String>> configuaration { get; private set; }
+        public State parent { get; }
         private float currentCost;
-        private String lastMove { get; }
+        public String lastMove { get; private set; }
         public State(List<String> inputValues, String heruistic="none", State goalState=null)
         {
             setConfiguration(inputValues);
@@ -71,13 +107,15 @@ namespace N_Puzzle
             }
             this.currentCost = 0;
             this.lastMove = null;
+            this.parent = null;
         }
-        private State(List<List<String>> configuaration, Heruistic heruistic, float currentCost, String lastMove)
+        private State(List<List<String>> configuaration, Heruistic heruistic, float currentCost, String lastMove, State parent)
         {
             this.heruistic = heruistic;
             this.configuaration = configuaration;
             this.currentCost = currentCost;
             this.lastMove = lastMove;
+            this.parent = parent;
         }
 
         private void setConfiguration(List<String> inputValues)
@@ -89,7 +127,7 @@ namespace N_Puzzle
             }
         }
 
-        public float getCost()
+        public double getCost()
         {           
             return this.currentCost + heruistic.calculate(this);
         }
@@ -127,7 +165,7 @@ namespace N_Puzzle
                 var tmp = this.getCopyOfConfiguration();
                 String move = $"({this.getValueAt(i, j - 1)} , down)";
                 swap(Tuple.Create(j, i), Tuple.Create(j - 1, i), tmp);
-                variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move));
+                variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move, this));
             }
             if (j != J)
             {
@@ -135,7 +173,7 @@ namespace N_Puzzle
                 var tmp = this.getCopyOfConfiguration();
                 String move = $"({this.getValueAt(i, j + 1)} , up)";
                 swap(Tuple.Create(j, i), Tuple.Create(j + 1, i), tmp);
-                variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move));
+                variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move, this));
             }
             if (i != 0)
             {
@@ -143,7 +181,7 @@ namespace N_Puzzle
                 var tmp = this.getCopyOfConfiguration();
                 String move = $"({this.getValueAt(i-1, j)} , right)";
                 swap(Tuple.Create(j, i), Tuple.Create(j, i-1), tmp);
-                variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move));
+                variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move, this));
             }
             if (i != I)
             {
@@ -151,7 +189,7 @@ namespace N_Puzzle
                 var tmp = this.getCopyOfConfiguration();
                 String move = $"({this.getValueAt(i+1, j)} , left)";
                 swap(Tuple.Create(j, i), Tuple.Create(j, i+1), tmp);
-                variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move));
+                variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move, this));
             }
             return variations;
         }
@@ -166,6 +204,24 @@ namespace N_Puzzle
         public string getValueAt(int i, int j)
         {
             return this.configuaration.ElementAt(j)[i];
+        }
+
+        public Tuple<int,int> getIndexOf(String value)
+        {
+            // Assumes there is only one occurance of value in the configuration. otherwise behaviour is unpredictable
+            var J = this.configuaration.Count;
+            var I = this.configuaration[0].Count;
+            for (int j = 0; j < J; j++)
+            {
+                for (int i = 0; i < I; i++)
+                {
+                    if (String.Equals(this.getValueAt(i,j),value))
+                    {
+                        return Tuple.Create(i, j);
+                    }
+                }
+            }
+            throw new Exception("Value not found");
         }
 
         private List<List<String>> getCopyOfConfiguration()
@@ -215,6 +271,13 @@ namespace N_Puzzle
             return 2062130366 + EqualityComparer<List<List<string>>>.Default.GetHashCode(configuaration);
         }
     }
+    class StateComparator : IComparer<State>
+    {
+        public int Compare(State x, State y)
+        {
+            return y.getCost().CompareTo(x.getCost());
+        }
+    }
     class Program
     {
         private static List<String> getInputs(string fileName)
@@ -248,20 +311,89 @@ namespace N_Puzzle
             return Tuple.Create(manhatten, misplaced);
         }
 
-        static void solve(State startingState, State goalState)
+        static String getOutput(State finalState)
+        {
+            String output = "";
+            char[] toTrim = { ' ', ',' };
+            var state = finalState;
+            while (state != null)
+            {
+                output = $"{state.lastMove}, {output}";
+                state = state.parent;
+
+            }
+            return output.Trim(toTrim);
+        }
+
+        static string solve(State startingState, State goalState)
         {
             var newStates = startingState.getPossibleNextStates();
-            return;
+            var visited = new HashSet<State>();
+            PriorityQueue<State> queue = new PriorityQueue<State>(new StateComparator());
+            foreach(State state in newStates)
+            {
+                queue.Add(state);
+            }
+            while(queue.Count != 0)
+            {
+                var top = queue.Peek();
+                queue.Remove(top);
+                visited.Add(top);
+                if (top.Equals(goalState))
+                {
+                    // done
+                    return getOutput(top);
+                }
+                newStates = top.getPossibleNextStates();
+                foreach (State state in newStates)
+                {
+                    //todo: check if the value still in queue and if so update queue
+                    if (!visited.Contains(state))
+                    {
+                        queue.Add(state);
+                    }                    
+                }
+            }
+            return "failed to solve";
+        }
+
+        static void writeOutput(String outFileName, string[] lines)
+        {
+            var filePath = AppDomain.CurrentDomain.BaseDirectory + '\\' + outFileName;
+            System.IO.File.WriteAllLines(filePath, lines);
         }
         static void Main(string[] args)
         {
             String startConfigFileName = args[0];
             String goalConfigFileName = args[1];
+            String outputFileName;
+            try
+            {
+                outputFileName  = args[2];
+            }
+            catch (IndexOutOfRangeException)
+            {
+
+                outputFileName = "output.txt";
+            }
+            
+
             var goalState = getGoalState(goalConfigFileName);
             var initialStates = createInitialState(startConfigFileName, goalState);
             var manhattenInitialState = initialStates.Item1;
             var misplacedInitialState = initialStates.Item2;
-            solve(manhattenInitialState, goalState);
+
+            var watchManhatten = System.Diagnostics.Stopwatch.StartNew();
+            var manhattenSolution = solve(manhattenInitialState, goalState);
+            var escapedMSManhatten = watchManhatten.ElapsedMilliseconds;
+
+            var watchMisplaced = System.Diagnostics.Stopwatch.StartNew();
+            var misplacedSolution = solve(misplacedInitialState, goalState);
+            watchMisplaced.Stop();
+            var escapedMSMisplaced = watchMisplaced.ElapsedMilliseconds;
+
+            string[] output = { manhattenSolution, $"{escapedMSManhatten}", $"{escapedMSMisplaced}" };
+            writeOutput(outputFileName, output);
         }
     }
 }
