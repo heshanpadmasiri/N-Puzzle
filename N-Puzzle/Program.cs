@@ -72,7 +72,7 @@ namespace N_Puzzle
             this.currentCost = 0;
             this.lastMove = null;
         }
-        private State(List<List<String>> configuaration, Heruistic heruistic, float currentCost, String LastMove)
+        private State(List<List<String>> configuaration, Heruistic heruistic, float currentCost, String lastMove)
         {
             this.heruistic = heruistic;
             this.configuaration = configuaration;
@@ -92,6 +92,94 @@ namespace N_Puzzle
         public float getCost()
         {           
             return this.currentCost + heruistic.calculate(this);
+        }
+
+        public List<State> getPossibleNextStates()
+        {
+            int J = this.configuaration.Count;
+            int I = this.configuaration.ElementAt(0).Count;
+            var possibleNextStates = new List<State>();
+            for(int j = 0; j < J; j++)
+            {
+                for(int i = 0; i < I; i++)
+                {
+                    if(String.Equals(this.getValueAt(i,j), "-"))
+                    {
+                        var variations = this.getVariations(i, j);
+                        foreach(State variation in variations)
+                        {
+                            possibleNextStates.Add(variation);
+                        }
+                    }
+                }
+            }
+            return possibleNextStates;
+        }
+
+        private List<State> getVariations(int i, int j)
+        {
+            int J = this.configuaration.Count-1;
+            int I = this.configuaration.ElementAt(0).Count-1;
+            List<State> variations = new List<State>();
+            if (j != 0)
+            {
+                // element at top can be moved down
+                var tmp = this.getCopyOfConfiguration();
+                String move = $"({this.getValueAt(i, j - 1)} , down)";
+                swap(Tuple.Create(j, i), Tuple.Create(j - 1, i), tmp);
+                variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move));
+            }
+            if (j != J)
+            {
+                // element below can be moved up
+                var tmp = this.getCopyOfConfiguration();
+                String move = $"({this.getValueAt(i, j + 1)} , up)";
+                swap(Tuple.Create(j, i), Tuple.Create(j + 1, i), tmp);
+                variations.Add(new State(tmp, this.heruistic, this.currentCost+1, move));
+            }
+            if (i != 0)
+            {
+                // element to right can be moved left
+                var tmp = this.getCopyOfConfiguration();
+                String move = $"({this.getValueAt(i-1, j)} , right)";
+                swap(Tuple.Create(j, i), Tuple.Create(j, i-1), tmp);
+                variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move));
+            }
+            if (i != I)
+            {
+                // element to left can be moved right
+                var tmp = this.getCopyOfConfiguration();
+                String move = $"({this.getValueAt(i+1, j)} , left)";
+                swap(Tuple.Create(j, i), Tuple.Create(j, i+1), tmp);
+                variations.Add(new State(tmp, this.heruistic, this.currentCost + 1, move));
+            }
+            return variations;
+        }
+
+        private void swap(Tuple<int,int> a, Tuple<int,int> b, List<List<String>> configuaration)
+        {
+            var tmp = configuaration[a.Item1][a.Item2];
+            configuaration[a.Item1][a.Item2] = configuaration[b.Item1][b.Item2];
+            configuaration[b.Item1][b.Item2] = tmp;
+        }
+
+        public string getValueAt(int i, int j)
+        {
+            return this.configuaration.ElementAt(j)[i];
+        }
+
+        private List<List<String>> getCopyOfConfiguration()
+        {
+            var copy = new List<List<String>>();
+            foreach(List<String> row in this.configuaration){
+                var tmp = new List<String>();
+                foreach(string val in row)
+                {
+                    tmp.Add(val);
+                }
+                copy.Add(tmp);
+            }
+            return copy;
         }
 
         public override bool Equals(object obj)
@@ -159,6 +247,12 @@ namespace N_Puzzle
             
             return Tuple.Create(manhatten, misplaced);
         }
+
+        static void solve(State startingState, State goalState)
+        {
+            var newStates = startingState.getPossibleNextStates();
+            return;
+        }
         static void Main(string[] args)
         {
             String startConfigFileName = args[0];
@@ -167,6 +261,7 @@ namespace N_Puzzle
             var initialStates = createInitialState(startConfigFileName, goalState);
             var manhattenInitialState = initialStates.Item1;
             var misplacedInitialState = initialStates.Item2;
+            solve(manhattenInitialState, goalState);
         }
     }
 }
